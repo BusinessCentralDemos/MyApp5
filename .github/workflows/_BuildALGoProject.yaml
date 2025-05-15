@@ -99,7 +99,7 @@ jobs:
           lfs: true
 
       - name: Read settings
-        uses: microsoft/AL-Go-Actions/ReadSettings@v7.1
+        uses: freddydk/AL-Go/Actions/ReadSettings@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
@@ -108,21 +108,28 @@ jobs:
 
       - name: Determine whether to build project
         id: DetermineBuildProject
-        uses: microsoft/AL-Go-Actions/DetermineBuildProject@v7.1
+        uses: freddydk/AL-Go/Actions/DetermineBuildProject@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           skippedProjectsJson: ${{ inputs.skippedProjectsJson }}
           project: ${{ inputs.project }}
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
+      - name: Determine secrets
+        id: DetermineSecrets
+        if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && github.event_name != 'pull_request'
+        uses: freddydk/AL-Go/Actions/DetermineSecrets@avoidallsecrets
+        with:
+          shell: ${{ inputs.shell }}
+          getSecrets: '${{ inputs.secrets }},appDependencySecrets,AZURE_CREDENTIALS,gitSubmodulesToken'
+
       - name: Read secrets
         id: ReadSecrets
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && github.event_name != 'pull_request'
-        uses: microsoft/AL-Go-Actions/ReadSecrets@v7.1
+        uses: freddydk/AL-Go/Actions/ReadSecrets@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
-          gitHubSecrets: ${{ toJson(secrets) }}
-          getSecrets: '${{ inputs.secrets }},appDependencySecrets,AZURE_CREDENTIALS,-gitSubmodulesToken'
+          gitHubSecrets: ${{ format(steps.DetermineSecrets.outputs.formatStr,toJSON(secrets[env.S0]),toJSON(secrets[env.S1]),toJSON(secrets[env.S2]),toJSON(secrets[env.S3]),toJSON(secrets[env.S4]),toJSON(secrets[env.S5]),toJSON(secrets[env.S6]),toJSON(secrets[env.S7]),toJSON(secrets[env.S8]),toJSON(secrets[env.S9]),toJSON(secrets[env.S10]),toJSON(secrets[env.S11]),toJSON(secrets[env.S12]),toJSON(secrets[env.S13]),toJSON(secrets[env.S14]),toJSON(secrets[env.S15]),toJSON(secrets[env.S16]),toJSON(secrets[env.S17]),toJSON(secrets[env.S18]),toJSON(secrets[env.S19]),toJSON(secrets[env.S20]),toJSON(secrets[env.S21]),toJSON(secrets[env.S22]),toJSON(secrets[env.S23]),toJSON(secrets[env.S24]),toJSON(secrets[env.S25]),toJSON(secrets[env.S26]),toJSON(secrets[env.S27]),toJSON(secrets[env.S28]),toJSON(secrets[env.S29]),toJSON(secrets[env.S30]),toJSON(secrets[env.S31])) }}
 
       - name: Checkout Submodules
         if: env.useGitSubmodules != 'false' && env.useGitSubmodules != ''
@@ -136,7 +143,7 @@ jobs:
       - name: Determine ArtifactUrl
         id: determineArtifactUrl
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
-        uses: microsoft/AL-Go-Actions/DetermineArtifactUrl@v7.1
+        uses: freddydk/AL-Go/Actions/DetermineArtifactUrl@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
@@ -151,7 +158,7 @@ jobs:
       - name: Download Project Dependencies
         id: DownloadProjectDependencies
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
-        uses: microsoft/AL-Go-Actions/DownloadProjectDependencies@v7.1
+        uses: freddydk/AL-Go/Actions/DownloadProjectDependencies@avoidallsecrets
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
         with:
@@ -162,7 +169,7 @@ jobs:
           baselineWorkflowRunId: ${{ inputs.baselineWorkflowRunId }}
 
       - name: Build
-        uses: microsoft/AL-Go-Actions/RunPipeline@v7.1
+        uses: freddydk/AL-Go/Actions/RunPipeline@avoidallsecrets
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True'
         env:
           Secrets: '${{ steps.ReadSecrets.outputs.Secrets }}'
@@ -180,7 +187,7 @@ jobs:
       - name: Sign
         id: sign
         if: steps.DetermineBuildProject.outputs.BuildIt == 'True' && inputs.signArtifacts && env.doNotSignApps == 'False' && (env.keyVaultCodesignCertificateName != '' || (fromJson(env.trustedSigning).Endpoint != '' && fromJson(env.trustedSigning).Account != '' && fromJson(env.trustedSigning).CertificateProfile != ''))
-        uses: microsoft/AL-Go-Actions/Sign@v7.1
+        uses: freddydk/AL-Go/Actions/Sign@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           azureCredentialsJson: '${{ fromJson(steps.ReadSecrets.outputs.Secrets).AZURE_CREDENTIALS }}'
@@ -188,7 +195,7 @@ jobs:
 
       - name: Calculate Artifact names
         id: calculateArtifactsNames
-        uses: microsoft/AL-Go-Actions/CalculateArtifactNames@v7.1
+        uses: freddydk/AL-Go/Actions/CalculateArtifactNames@avoidallsecrets
         if: success() || failure()
         with:
           shell: ${{ inputs.shell }}
@@ -273,8 +280,8 @@ jobs:
 
       - name: Analyze Test Results
         id: analyzeTestResults
-        if: (success() || failure()) && env.doNotRunTests == 'False' && ((hashFiles(format('{0}/.buildartifacts/TestResults.xml',inputs.project)) != '') || (hashFiles(format('{0}/.buildartifacts/bcptTestResults.json',inputs.project)) != ''))
-        uses: microsoft/AL-Go-Actions/AnalyzeTests@v7.1
+        if: (success() || failure()) && env.doNotRunTests == 'False'
+        uses: freddydk/AL-Go/Actions/AnalyzeTests@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
@@ -283,7 +290,7 @@ jobs:
       - name: Analyze BCPT Test Results
         id: analyzeTestResultsBCPT
         if: (success() || failure()) && env.doNotRunBcptTests == 'False'
-        uses: microsoft/AL-Go-Actions/AnalyzeTests@v7.1
+        uses: freddydk/AL-Go/Actions/AnalyzeTests@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
@@ -292,7 +299,7 @@ jobs:
       - name: Analyze Page Scripting Test Results
         id: analyzeTestResultsPageScripting
         if: (success() || failure()) && env.doNotRunpageScriptingTests == 'False'
-        uses: microsoft/AL-Go-Actions/AnalyzeTests@v7.1
+        uses: freddydk/AL-Go/Actions/AnalyzeTests@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
@@ -300,7 +307,7 @@ jobs:
 
       - name: Cleanup
         if: always() && steps.DetermineBuildProject.outputs.BuildIt == 'True'
-        uses: microsoft/AL-Go-Actions/PipelineCleanup@v7.1
+        uses: freddydk/AL-Go/Actions/PipelineCleanup@avoidallsecrets
         with:
           shell: ${{ inputs.shell }}
           project: ${{ inputs.project }}
